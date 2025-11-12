@@ -7,7 +7,7 @@ DB_PWD  = os.getenv("DB_PASSWORD","rootpass")
 DB_NAME = os.getenv("DB_NAME","subscriptions")
 
 def connect():
-    return pymysql.connect(host=DB_HOST, user=DB_USER, password=DB_PWD, database=DB_NAME, cursorclass=pymysql.cursors.DictCursor, autocommit=True)
+    return pymysql.connect(host=DB_HOST, port=4408, user=DB_USER, password=DB_PWD, database=DB_NAME, cursorclass=pymysql.cursors.DictCursor, autocommit=True)
 
 def test_create_read_update_delete():
     email = f"{uuid.uuid4()}@example.com"

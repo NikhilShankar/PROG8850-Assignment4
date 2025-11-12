@@ -1,0 +1,71 @@
+name: Database Migration CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: rootpass
+          MYSQL_DATABASE: subscriptions
+        ports:
+          - 4408:3306
+        options: >-
+          --health-cmd="mysqladmin ping -prootpass"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+    
+    - name: Wait for MySQL
+      run: sleep 10
+    
+    - name: Create DB user
+      run: |
+        mysql -h 127.0.0.1 -uroot -prootpass -e "
+          CREATE USER IF NOT EXISTS 'sub_user'@'%' IDENTIFIED BY 'sub_pass';
+          GRANT ALL PRIVILEGES ON subscriptions.* TO 'sub_user'@'%';
+          FLUSH PRIVILEGES;"
+    
+    - name: Run initial migrations
+      run: |
+        docker run --rm --network host -v ${{ github.workspace }}/flyway:/flyway/sql flyway/flyway:10 \
+          -url=jdbc:mysql://127.0.0.1:4408/subscriptions?allowPublicKeyRetrieval=true \
+          -user=sub_user -password=sub_pass \
+          -locations=filesystem:/flyway/sql/migrations_initial migrate
+    
+    - name: Run incremental migrations
+      run: |
+        docker run --rm --network host -v ${{ github.workspace }}/flyway:/flyway/sql flyway/flyway:10 \
+          -url=jdbc:mysql://127.0.0.1:4408/subscriptions?allowPublicKeyRetrieval=true \
+          -user=sub_user -password=sub_pass \
+          -locations=filesystem:/flyway/sql/migrations_initial,filesystem:/flyway/sql/migrations_incremental migrate
+    
+    - name: Run tests
+      run: pytest tests/test_subscribers.py -v
+      env:
+        DB_HOST: 127.0.0.1
+        DB_USER: sub_user
+        DB_PASSWORD: sub_pass
+        DB_NAME: subscriptions
+    
+    - name: Print deployment success
+      run: echo "Deployment done for commit ${{ github.sha }}"
