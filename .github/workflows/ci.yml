@@ -40,7 +40,7 @@ jobs:
     
     - name: Create DB user
       run: |
-        mysql -h 127.0.0.1 -uroot -prootpass -e "
+        mysql -h 127.0.0.1 -P 4408 -uroot -prootpass -e "
           CREATE USER IF NOT EXISTS 'sub_user'@'%' IDENTIFIED BY 'sub_pass';
           GRANT ALL PRIVILEGES ON subscriptions.* TO 'sub_user'@'%';
           FLUSH PRIVILEGES;"
