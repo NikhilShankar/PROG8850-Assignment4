@@ -1,0 +1,7 @@
+
+flowchart TD
+    A[Code Push] --> B[Build]
+    B --> C[DB Setup]
+    C --> D[Run Migrations - Flyway]
+    D --> E[Tests]
+    E --> F[Deploy]
